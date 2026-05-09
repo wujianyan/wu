@@ -69,3 +69,16 @@ nav a { color: var(--muted); text-decoration: none; margin-left: 0.75rem; }
 .err { color: var(--err); margin: 0 0 0.5rem; }
 .ok { border: 1px solid #22c55e55; }
 .foot { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 2rem; }
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #1f2a48;
+  font-size: 0.9rem;
+}
+.tbl th, .tbl td { padding: 0.55rem 0.65rem; text-align: left; border-bottom: 1px solid #1f2a48; }
+.tbl th { color: var(--accent2); font-weight: 600; }
+.tbl tr:last-child td { border-bottom: none; }
+.sheet { margin-top: 1rem; }

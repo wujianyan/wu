@@ -18,7 +18,7 @@ let layout (title: string) (body: string) =
 <body>
   <header class="head">
     <div class="brand"><a href="/">CampusMeet</a><span>workshop desk</span></div>
-    <nav><a href="/">Sessions</a></nav>
+    <nav><a href="/">Sessions</a><a href="/desk">Sign-up log</a></nav>
   </header>
   <main class="wrap">%s</main>
   <footer class="foot">Registrations are stored in memory on this demo host.</footer>
@@ -27,13 +27,11 @@ let layout (title: string) (body: string) =
         (esc title)
         body
 
-let listWorkshops (regs: int list) =
-    let regCount wid = regs |> List.filter ((=) wid) |> List.length
-
+let listWorkshops (regs: Registration list) =
     let cards =
         workshops
         |> List.map (fun w ->
-            let taken = regCount w.Id
+            let taken = registrationCount w.Id regs
             let left = max (w.Seats - taken) 0
 
             sprintf
@@ -103,3 +101,33 @@ let missing () =
     layout
         "Not found"
         """<section class="card"><h1>Unknown workshop</h1><p><a href="/">Return</a></p></section>"""
+
+let registry (regs: Registration list) =
+    let rows =
+        match registrationsNewestFirst regs with
+        | [] -> "<tr><td colspan=\"5\" class=\"muted\">No registrations yet.</td></tr>"
+        | xs ->
+            xs
+            |> List.map (fun r ->
+                let title =
+                    match tryWorkshop r.WorkshopId with
+                    | Some w -> w.Title
+                    | None -> "Unknown id"
+
+                sprintf
+                    """<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="muted">%s</td></tr>"""
+                    (esc title)
+                    (esc r.Name)
+                    (esc r.Email)
+                    (esc r.Diet)
+                    (r.AtUtc.ToString("yyyy-MM-dd HH:mm") + " UTC"))
+            |> String.concat ""
+
+    layout
+        "Sign-up log"
+        (sprintf
+            """<section class="hero"><h1>Who signed up (demo)</h1>
+<p>This page lists rows kept in memory for the running server. Do not put real personal data here.</p></section>
+<section class="sheet"><table class="tbl"><thead><tr><th>Session</th><th>Name</th><th>Email</th><th>Diet note</th><th>When</th></tr></thead><tbody>%s</tbody></table>
+<p><a href="/">← Sessions</a></p></section>"""
+            rows)

@@ -41,3 +41,21 @@ let workshops : Workshop list =
     ]
 
 let tryWorkshop (id: int) = workshops |> List.tryFind (fun w -> w.Id = id)
+
+type Registration =
+    {
+        WorkshopId: int
+        Name: string
+        Email: string
+        Diet: string
+        AtUtc: DateTime
+    }
+
+let registrationsFor (wsId: int) (regs: Registration list) =
+    regs |> List.filter (fun r -> r.WorkshopId = wsId)
+
+let registrationCount (wsId: int) (regs: Registration list) =
+    registrationsFor wsId regs |> List.length
+
+let registrationsNewestFirst (regs: Registration list) =
+    regs |> List.sortByDescending (fun r -> r.AtUtc)

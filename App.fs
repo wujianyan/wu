@@ -10,24 +10,36 @@ open EventDesk.Logic
 open EventDesk.Html
 
 let private gate = obj ()
-let private regs = ResizeArray<int> ()
+let private regs = ResizeArray<Registration> ()
 
 let private writeHtml (ctx: HttpContext) (html: string) =
     ctx.Response.ContentType <- "text/html; charset=utf-8"
     ctx.Response.WriteAsync(html)
 
+let private textOrEmpty (t: string | null) =
+    match t with
+    | null -> ""
+    | x -> x
+
+let private routeText (o: obj | null) =
+    match o with
+    | null -> ""
+    | v -> textOrEmpty (v.ToString())
+
 let private formGet (form: IFormCollection) (name: string) =
     let mutable s = StringValues.Empty
 
     if form.TryGetValue(name, &s) then
-        s.ToString()
+        textOrEmpty (s.ToString())
     else
         ""
 
 let private routeId (ctx: HttpContext) =
     match ctx.Request.RouteValues.TryGetValue("id") with
     | true, v ->
-        match System.Int32.TryParse(string v) with
+        let t = routeText v
+
+        match System.Int32.TryParse(t) with
         | true, n -> n
         | _ -> 0
     | _ -> 0
@@ -40,6 +52,16 @@ let mapRoutes (app: WebApplication) =
                 lock gate (fun () -> regs |> Seq.toList)
 
             writeHtml ctx (listWorkshops ids))
+    )
+    |> ignore
+
+    app.MapGet(
+        "/desk",
+        RequestDelegate(fun ctx ->
+            let rows =
+                lock gate (fun () -> regs |> Seq.toList)
+
+            writeHtml ctx (registry rows))
     )
     |> ignore
 
@@ -66,7 +88,7 @@ let mapRoutes (app: WebApplication) =
                     let! form = ctx.Request.ReadFormAsync()
                     let name = formGet form "name"
                     let email = formGet form "email"
-                    let _diet = formGet form "diet"
+                    let diet = formGet form "diet"
 
                     if String.IsNullOrWhiteSpace(name) || String.IsNullOrWhiteSpace(email) then
                         return! writeHtml ctx (registerForm w (Some "Name and email are required."))
@@ -74,12 +96,21 @@ let mapRoutes (app: WebApplication) =
                         return! writeHtml ctx (registerForm w (Some "Email looks invalid."))
                     else
                         let taken =
-                            lock gate (fun () -> regs |> Seq.filter ((=) id) |> Seq.length)
+                            lock gate (fun () -> regs |> Seq.filter (fun r -> r.WorkshopId = id) |> Seq.length)
 
                         if taken >= w.Seats then
                             return! writeHtml ctx (registerForm w (Some "This session is full."))
                         else
-                            lock gate (fun () -> regs.Add(id))
+                            let row =
+                                {
+                                    WorkshopId = id
+                                    Name = name.Trim()
+                                    Email = email.Trim()
+                                    Diet = diet.Trim()
+                                    AtUtc = DateTime.UtcNow
+                                }
+
+                            lock gate (fun () -> regs.Add(row))
                             return! writeHtml ctx (thankYou name w.Title)
             })
     )
